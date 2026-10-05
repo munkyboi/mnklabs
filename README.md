@@ -13,7 +13,22 @@ npm run dev
 
 The Vite development server includes `/api/contact` middleware. Copy `.env.example` to `.env.local` and configure the server-only values to enable email delivery. Restart the development server after changing those values.
 
-## Production
+## Netlify deployment
+
+Import `munkyboi/mnklabs` into Netlify and use the `main` branch. The committed `netlify.toml` sets:
+
+- Build command: `npm run build`
+- Publish directory: `dist/client`
+- Functions directory: `netlify/functions`
+- Node.js: 22
+
+Netlify serves the React site from its CDN and bundles the contact endpoint as a serverless function at `/api/contact`. No persistent Node server is required. React routes reload through the SPA fallback. Use Git-based deployment so the function is deployed along with the static site; uploading only `dist/client` will not include the function.
+
+In Netlify project configuration, add `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `CONTACT_TO_EMAIL` as environment variables available to **Functions** (or all scopes). Optionally set `SITE_URL` to restrict submissions to the canonical origin; if omitted, the request's own origin is used, which also supports Netlify preview URLs. Redeploy after changing runtime variables. Keep sending credentials scoped to production if deploy previews should not send mail.
+
+The GitHub `production` secret does not transfer automatically to Netlify's Git builds. Copy the key securely through Netlify's environment-variable UI; do not commit it or put it in a build command. See [Netlify function environment variables](https://docs.netlify.com/build/functions/environment-variables/).
+
+## Optional Node hosting
 
 ```sh
 npm run build
@@ -21,23 +36,23 @@ npm test
 HOST=0.0.0.0 PORT=8080 npm start
 ```
 
-The Node/Express server serves `dist/client`, handles React route fallbacks, and accepts contact requests at `/api/contact`. Deploy both the static output and server sources/dependencies. `npm run preview` is a static visual preview and does not provide the contact API. The bundled Sites worker remains a static-only adapter and does not run the Node contact endpoint.
+The optional Express server serves `dist/client` and the same contact handler. `npm run preview` and the bundled Sites worker provide static visual previews without a contact API.
 
 ## Contact delivery
 
-Set these environment variables on the running server:
+Set these server-only environment variables on Netlify (or the optional Node server):
 
 - `RESEND_API_KEY`: Resend sending key.
-- `RESEND_FROM_EMAIL`: sender email on a domain verified in Resend, without a display name.
+- `RESEND_FROM_EMAIL`: sender email on a domain verified in Resend, without a display name. Selected sender: `enquiries@getprio.online`, using the existing verified sending domain. This sender does not create a receiving mailbox; visitor replies go to their supplied Reply-To address.
 - `CONTACT_TO_EMAIL`: inbox that should receive project enquiries.
-- `SITE_URL`: canonical website origin, such as `https://your-company-domain.example`.
-- `TRUST_PROXY_HOPS`: optional exact count of trusted reverse proxies. Leave unset for direct server access.
+- `SITE_URL`: optional canonical website origin, such as `https://your-company-domain.example`.
+- `TRUST_PROXY_HOPS`: Node/Express only; optional exact count of trusted reverse proxies. Netlify uses its trusted function context IP.
 
 Never prefix these variables with `VITE_` or embed them in the client build. The form sends only to the server-configured inbox and sets the visitor’s email as Reply-To. It sends a plain-text enquiry and does not subscribe the visitor to marketing or send an automatic reply.
 
 A GitHub Actions environment secret is available only to workflows that reference that environment. It is not automatically available on the hosting server. The existing `production` environment’s `RESEND_API_KEY` therefore needs a deployment integration or an equivalent secret on the chosen runtime host. The example CI workflow at `docs/setup/github-ci.yml.example` runs the build and tests without sending email or reading the production key. To enable it, copy it to `.github/workflows/ci.yml` using a GitHub connection with workflow permission.
 
-Validation, maximum request size, an invisible honeypot, same-origin checks, per-process rate limiting, and Resend idempotency keys protect the endpoint. The rate limiter is in-memory and resets on restart; multi-instance hosting should provide a shared or edge rate limit. The server reports success only after Resend accepts an email ID; that is not a guarantee of inbox delivery. Tests mock Resend and send no email.
+Validation, maximum request size, an invisible honeypot, same-origin checks, per-process rate limiting, and Resend idempotency keys protect the endpoint. The handler rate limiter is per instance and resets on restart. Netlify also applies the function’s configured edge rate limit of five requests per IP/domain per ten minutes across instances. The server reports success only after Resend accepts an email ID; that is not a guarantee of inbox delivery. Tests mock Resend and send no email.
 
 ## Content and portfolio
 

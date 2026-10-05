@@ -68,3 +68,9 @@ Source detail and editorial boundaries: `docs/portfolio-sources.md`. No deployme
 ## Contact form — 2026-10-06
 
 Production build and all 11 tests pass (seven contact handler checks and four static hosting checks). Browser submission with synthetic details correctly displays an unavailable-service error when runtime configuration is missing, retains fields, restores the send button, and focuses the status. Production Node server serves a direct case-study route with HTTP 200 and returns HTTP 503 for an unconfigured contact submission. No email was sent. Screenshot: `docs/qa/contact-desktop.png`.
+
+## Netlify hosting — 2026-10-06
+
+Committed Netlify build configuration publishes `dist/client` with a modern function at `/api/contact` and a React route fallback. Function adapter is bundled in its test and verifies runtime environment lookups, trusted context IP rather than caller-supplied forwarding headers, safe unconfigured responses, method handling, and rate limiting. Production build and all 12 checks pass; no live email sent. Vite updated to the compatible 6.4.3 patch; dependency audit reports zero vulnerabilities.
+
+Resend account check found only `getprio.online` verified for sending. Selected sender is `enquiries@getprio.online`; the receiving mailbox remains unconfigured. Netlify connector requires reauthentication, so no deployment or remote environment changes were performed.
