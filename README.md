@@ -43,7 +43,7 @@ The optional Express server serves `dist/client` and the same contact handler. `
 Set these server-only environment variables on Netlify (or the optional Node server):
 
 - `RESEND_API_KEY`: Resend sending key.
-- `RESEND_FROM_EMAIL`: sender email on a domain verified in Resend, without a display name. Selected sender: `enquiries@getprio.online`, using the existing verified sending domain. This sender does not create a receiving mailbox; visitor replies go to their supplied Reply-To address.
+- `RESEND_FROM_EMAIL`: sender email on a domain verified in Resend, without a display name. Selected sender: `enquiries@mnklabs.net`. Use a Resend API key from the team that owns `mnklabs.net` and confirm its sending verification before enabling delivery. This sender does not create a receiving mailbox; visitor replies go to their supplied Reply-To address.
 - `CONTACT_TO_EMAIL`: inbox that should receive project enquiries.
 - `SITE_URL`: optional canonical website origin, such as `https://your-company-domain.example`.
 - `TRUST_PROXY_HOPS`: Node/Express only; optional exact count of trusted reverse proxies. Netlify uses its trusted function context IP.

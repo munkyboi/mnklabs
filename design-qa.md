@@ -73,4 +73,8 @@ Production build and all 11 tests pass (seven contact handler checks and four st
 
 Committed Netlify build configuration publishes `dist/client` with a modern function at `/api/contact` and a React route fallback. Function adapter is bundled in its test and verifies runtime environment lookups, trusted context IP rather than caller-supplied forwarding headers, safe unconfigured responses, method handling, and rate limiting. Production build and all 12 checks pass; no live email sent. Vite updated to the compatible 6.4.3 patch; dependency audit reports zero vulnerabilities.
 
-Resend account check found only `getprio.online` verified for sending. Selected sender is `enquiries@getprio.online`; the receiving mailbox remains unconfigured. Netlify connector requires reauthentication, so no deployment or remote environment changes were performed.
+Resend account check found only `getprio.online` verified for sending. Sender corrected to `enquiries@mnklabs.net` per user instruction; `mnklabs.net` must be verified in Resend before delivery; the receiving mailbox remains unconfigured. Netlify connector requires reauthentication, so no deployment or remote environment changes were performed.
+
+## Sender correction — 2026-10-06
+
+User requested `mnklabs.net`; selected sender updated to `enquiries@mnklabs.net` in setup configuration and documentation. Resend reports that domain belongs to another team, so it was not added or claimed in the currently connected account. Runtime API key must belong to its owning Resend team. No email or deployment performed.
