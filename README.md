@@ -59,3 +59,7 @@ Validation, maximum request size, an invisible honeypot, same-origin checks, per
 Edit `src/content.js` for services and `src/projects.js` for portfolio descriptions, technology explanations, and screenshot captions. `/portfolio` lists the projects; `/portfolio/getprio` and `/portfolio/printcollective` are the case-study routes. Local screenshots are in `public/assets/projects/` and can be enlarged in the browser. Product-source notes are in `docs/portfolio-sources.md`.
 
 The original HTML, CSS, and JavaScript are preserved in `archive/original-html/`. Photos, marks, and Raleway files are served locally. See `THIRD_PARTY_NOTICES.md` for attribution and `design-qa.md` for browser checks.
+
+## Contact troubleshooting
+
+After deployment, check Netlify function logs for `contact` after a failed submission. Safe diagnostic events identify missing/invalid setting names (`contact_configuration_error`), Resend's HTTP rejection status (`contact_provider_rejected`), network/provider failure (`contact_provider_unavailable`), and honeypot blocking (`contact_blocked`). They contain no credentials, email addresses, or enquiry text. Check Resend's Logs in the team that issued the Netlify API key to see rejection details. Environment changes require a fresh deploy.

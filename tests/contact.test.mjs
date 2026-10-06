@@ -68,3 +68,16 @@ test('only POST requests are accepted', async () => {
   const handler = createContactHandler();
   assert.equal((await handler(new Request('https://mnklabs.example.test/api/contact'), env)).status, 405);
 });
+
+test('diagnostics identify configuration and provider failures without logging secrets or enquiry contents', async () => {
+  const logs = [];
+  const handler = createContactHandler({ rateLimit: noLimit, log: (event) => logs.push(event), fetchImpl: async () => Response.json({ message: 'private provider response' }, { status: 403 }) });
+  await handler(request(), { ...env, CONTACT_TO_EMAIL: '' });
+  await handler(request(), env);
+  assert.deepEqual(logs, [
+    { event: 'contact_configuration_error', invalidSettings: ['CONTACT_TO_EMAIL'] },
+    { event: 'contact_provider_rejected', status: 403 },
+  ]);
+  const logged = JSON.stringify(logs);
+  for (const value of [env.RESEND_API_KEY, valid.email, valid.message, 'private provider response']) assert.equal(logged.includes(value), false);
+});

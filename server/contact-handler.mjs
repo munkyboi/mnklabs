@@ -37,7 +37,7 @@ async function readBody(request) {
   return JSON.parse(new TextDecoder().decode(buffer));
 }
 
-export function createContactHandler({ fetchImpl = fetch, rateLimit = createRateLimiter() } = {}) {
+export function createContactHandler({ fetchImpl = fetch, rateLimit = createRateLimiter(), log = (event) => console.warn(JSON.stringify(event)) } = {}) {
   return async function contact(request, env, ip = 'unknown') {
     if (request.method !== 'POST') return json({ error: 'Use POST to send an enquiry.' }, 405, { Allow: 'POST' });
     const expectedOrigin = env.SITE_URL ? new URL(env.SITE_URL).origin : new URL(request.url).origin;
@@ -50,7 +50,10 @@ export function createContactHandler({ fetchImpl = fetch, rateLimit = createRate
     try { body = await readBody(request); }
     catch (error) { return json({ error: error.message === 'too-large' ? 'Your enquiry is too long.' : 'Please check your enquiry and try again.' }, error.message === 'too-large' ? 413 : 400); }
     if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'Please check your enquiry and try again.' }, 400);
-    if (typeof body.website === 'string' && body.website.trim()) return json({ ok: true });
+    if (typeof body.website === 'string' && body.website.trim()) {
+      log({ event: 'contact_blocked', reason: 'honeypot' });
+      return json({ ok: true });
+    }
     const limits = { name: [2, 100], email: [3, 254], company: [0, 150], message: [20, 5000] };
     const values = {};
     for (const [field, [min, max]] of Object.entries(limits)) {
@@ -60,7 +63,15 @@ export function createContactHandler({ fetchImpl = fetch, rateLimit = createRate
     }
     if (!emailPattern.test(values.email)) return json({ error: 'Please enter a valid email address.' }, 400);
     if (!uuidPattern.test(body.submissionId || '')) return json({ error: 'Please refresh the page and try again.' }, 400);
-    if (!env.RESEND_API_KEY || !emailPattern.test(env.RESEND_FROM_EMAIL || '') || !emailPattern.test(env.CONTACT_TO_EMAIL || '')) return json({ error: 'The enquiry service is not available yet. Please try again later.' }, 503);
+    const invalidSettings = [
+      ...(!env.RESEND_API_KEY ? ['RESEND_API_KEY'] : []),
+      ...(!emailPattern.test(env.RESEND_FROM_EMAIL || '') ? ['RESEND_FROM_EMAIL'] : []),
+      ...(!emailPattern.test(env.CONTACT_TO_EMAIL || '') ? ['CONTACT_TO_EMAIL'] : []),
+    ];
+    if (invalidSettings.length) {
+      log({ event: 'contact_configuration_error', invalidSettings });
+      return json({ error: 'The enquiry service is not available yet. Please try again later.' }, 503);
+    }
     try {
       const response = await fetchImpl('https://api.resend.com/emails', {
         method: 'POST',
@@ -74,10 +85,19 @@ export function createContactHandler({ fetchImpl = fetch, rateLimit = createRate
           text: `New project enquiry\n\nName: ${values.name}\nEmail: ${values.email}\nCompany: ${values.company || 'Not provided'}\n\nProject details:\n${values.message}`,
         }),
       });
-      if (!response.ok) return json({ error: 'We couldn’t send your enquiry. Please try again shortly.' }, 502);
+      if (!response.ok) {
+        log({ event: 'contact_provider_rejected', status: response.status });
+        return json({ error: 'We couldn’t send your enquiry. Please try again shortly.' }, 502);
+      }
       const data = await response.json();
-      if (!data.id) return json({ error: 'We couldn’t confirm your enquiry. Please try again shortly.' }, 502);
+      if (!data.id) {
+        log({ event: 'contact_provider_unconfirmed' });
+        return json({ error: 'We couldn’t confirm your enquiry. Please try again shortly.' }, 502);
+      }
       return json({ ok: true });
-    } catch { return json({ error: 'We couldn’t confirm your enquiry. Please try again shortly.' }, 502); }
+    } catch {
+      log({ event: 'contact_provider_unavailable' });
+      return json({ error: 'We couldn’t confirm your enquiry. Please try again shortly.' }, 502);
+    }
   };
 }
